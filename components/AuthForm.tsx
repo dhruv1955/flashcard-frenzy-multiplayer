@@ -2,35 +2,30 @@
 
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { useAuth } from "./AuthProvider";
 
 type Mode = "signin" | "signup";
 
 export default function AuthForm() {
   const supabase = createSupabaseBrowserClient();
+  const { signIn, signUp } = useAuth();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [touched, setTouched] = useState({ email: false, password: false });
+
+  const emailError = touched.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? "Enter a valid email" : null;
+  const passwordError = touched.password && password.length < 6 ? "At least 6 characters" : null;
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (signUpError) throw signUpError;
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-      }
+      if (mode === "signup") await signUp(email, password);
+      else await signIn(email, password);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -50,9 +45,11 @@ export default function AuthForm() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          onBlur={() => setTouched((t) => ({ ...t, email: true }))}
           required
           className="border rounded px-3 py-2"
         />
+        {emailError && <p className="text-xs text-red-600">{emailError}</p>}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="password" className="text-sm">Password</label>
@@ -61,9 +58,11 @@ export default function AuthForm() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => setTouched((t) => ({ ...t, password: true }))}
           required
           className="border rounded px-3 py-2"
         />
+        {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
       </div>
       {error && (
         <div className="text-sm text-red-600" role="alert">
@@ -72,7 +71,7 @@ export default function AuthForm() {
       )}
       <button
         type="submit"
-        disabled={loading}
+        disabled={loading || !!emailError || !!passwordError}
         className="bg-blue-600 text-white rounded px-4 py-2 disabled:opacity-60"
       >
         {loading ? "Please wait..." : mode === "signin" ? "Sign in" : "Sign up"}
