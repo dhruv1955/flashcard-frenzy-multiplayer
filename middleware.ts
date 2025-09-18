@@ -11,7 +11,13 @@ const PUBLIC_PATHS = new Set<string>([
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC_PATHS.has(pathname) || pathname.startsWith('/_next') || pathname.startsWith('/api/public')) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    // security headers
+    res.headers.set('X-Content-Type-Options', 'nosniff');
+    res.headers.set('X-Frame-Options', 'DENY');
+    res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.headers.set('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=()');
+    return res;
   }
 
   // Read the Supabase auth cookie set by @supabase/ssr
@@ -23,7 +29,12 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set('X-Content-Type-Options', 'nosniff');
+  res.headers.set('X-Frame-Options', 'DENY');
+  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.headers.set('Permissions-Policy', 'accelerometer=(), camera=(), geolocation=()');
+  return res;
 }
 
 export const config = {

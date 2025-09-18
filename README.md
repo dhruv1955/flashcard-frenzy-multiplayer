@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Flashcard Frenzy — Multiplayer Flashcard Game
+================================================
 
-## Getting Started
+Tech stack
+- Next.js App Router, React Server/Client Components
+- Supabase (Auth, Realtime via `active_games`, `game_events`)
+- MongoDB (questions, games, gameHistory)
+- Tailwind CSS v4
+- TypeScript + Zod
 
-First, run the development server:
-
+Quick start
+1) Install deps
+```bash
+npm i
+```
+2) Create `.env.local`
+```
+NEXT_PUBLIC_SUPABASE_URL=your-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role
+MONGODB_URI=your-mongodb-uri
+MONGODB_DB=flashcard_frenzy
+```
+3) Run dev server
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Supabase setup
+- Create tables `active_games` and `game_events` with columns:
+  - active_games: id uuid PK, game_state jsonb, players uuid[], current_question_id uuid, scores jsonb, status text
+  - game_events: id uuid PK, game_id uuid, player_id uuid, event_type text, data jsonb, timestamp timestamptz
+- Configure RLS: allow service role to upsert/insert. Client should only subscribe.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Key directories
+- `app/api/*`: API routes (games, questions, history, stats)
+- `components/*`: UI components (Auth, GameRoom, Lobby, QuestionCard, Scoreboard, History)
+- `lib/*`: database, auth, realtime utilities
+- `types/*`: shared TypeScript models
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Production tips
+- Set `SUPABASE_SERVICE_ROLE_KEY` only on server (Vercel project env) and never expose it to the client.
+- Add monitoring (e.g., Sentry) by instrumenting `app/error.tsx` and API error catches.
+- Tune MongoDB indexes: `games.id`, `gameHistory.playerId`, `gameHistory.gameId`, `questions.id`, `questions.category`.
+- Rate limit APIs at the edge or with a gateway. Current middleware sets security headers; integrate a provider like Upstash for quotas.
 
-## Learn More
+Deployment
+- Vercel: push to GitHub, import project, set Environment Variables, and deploy.
+- Ensure database/network egress is allowed for MongoDB and Supabase.
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Scripts
+- `npm run dev` — start dev server
+- `npm run build` — build
+- `npm start` — start production

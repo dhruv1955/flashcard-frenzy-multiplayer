@@ -105,7 +105,7 @@ export function GameRoom({ gameId }: { gameId: string }) {
           {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
           {state.status === 'waiting' && <p>Waiting for players...</p>}
           {state.status === 'in_progress' && questionPrompt && (
-            <QuestionCard prompt={questionPrompt} seconds={30} onAnswer={submitAnswer} />
+            <QuestionCard prompt={questionPrompt} seconds={30} onAnswer={submitAnswer} revealText={null} />
           )}
           {state.status === 'completed' && (
             <div className="space-y-2">

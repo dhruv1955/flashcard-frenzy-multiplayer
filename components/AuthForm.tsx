@@ -47,9 +47,11 @@ export default function AuthForm() {
           onChange={(e) => setEmail(e.target.value)}
           onBlur={() => setTouched((t) => ({ ...t, email: true }))}
           required
+          aria-invalid={!!emailError}
+          aria-describedby={emailError ? 'email-error' : undefined}
           className="border rounded px-3 py-2"
         />
-        {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+        {emailError && <p id="email-error" className="text-xs text-red-600">{emailError}</p>}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="password" className="text-sm">Password</label>
@@ -60,9 +62,11 @@ export default function AuthForm() {
           onChange={(e) => setPassword(e.target.value)}
           onBlur={() => setTouched((t) => ({ ...t, password: true }))}
           required
+          aria-invalid={!!passwordError}
+          aria-describedby={passwordError ? 'password-error' : undefined}
           className="border rounded px-3 py-2"
         />
-        {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
+        {passwordError && <p id="password-error" className="text-xs text-red-600">{passwordError}</p>}
       </div>
       {error && (
         <div className="text-sm text-red-600" role="alert">
