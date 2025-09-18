@@ -26,6 +26,8 @@ export async function POST(req: Request) {
     const game = await games.findOne({ id: body.gameId });
     if (!game) return NextResponse.json({ error: 'Game not found' }, { status: 404 });
     if (game.status !== 'waiting') return NextResponse.json({ error: 'Game not joinable' }, { status: 400 });
+    const maxPlayers = game.maxPlayers ?? 6;
+    if (game.players.length >= maxPlayers) return NextResponse.json({ error: 'Game is full' }, { status: 400 });
     if (game.players.includes(body.playerId)) return NextResponse.json({ game }, { status: 200 });
 
     await games.updateOne(

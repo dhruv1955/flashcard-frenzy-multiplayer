@@ -31,11 +31,32 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
     const correct = question.answer.trim().toLowerCase() === body.answer.trim().toLowerCase();
-    const increment = correct ? 1 : 0;
-    await games.updateOne(
-      { id },
-      { $inc: { [`scores.${body.playerId}`]: increment } as any }
-    );
+    // Prevent multiple answers from same player for this question
+    if ((game.answeredPlayerIds ?? []).includes(body.playerId)) {
+      return NextResponse.json({ correct: false, alreadyAnswered: true, game }, { status: 200 });
+    }
+
+    // If already someone got it first, just mark as answered
+    if (game.firstCorrectPlayerId) {
+      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId } });
+      const updatedAfter = await games.findOne({ id });
+      return NextResponse.json({ correct: false, game: updatedAfter }, { status: 200 });
+    }
+
+    // If correct and first, award points and set winner
+    if (correct) {
+      await games.updateOne(
+        { id },
+        {
+          $set: { firstCorrectPlayerId: body.playerId },
+          $inc: { [`scores.${body.playerId}`]: 1 } as any,
+          $push: { answeredPlayerIds: body.playerId },
+        }
+      );
+    } else {
+      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId } });
+    }
+
     const updated = await games.findOne({ id });
     return NextResponse.json({ correct, game: updated }, { status: 200 });
   } catch (error) {

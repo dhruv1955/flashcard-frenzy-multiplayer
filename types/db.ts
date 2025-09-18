@@ -21,6 +21,13 @@ export interface GameDoc {
   status: GameStatus;
   createdAt: string;
   endedAt?: string;
+  // extended state for gameplay
+  maxPlayers?: number; // default 6
+  questionQueue?: UUID[]; // preselected 10 question ids
+  currentIndex?: number; // 0-based index into questionQueue
+  currentQuestionStartedAt?: string; // ISO timestamp
+  answeredPlayerIds?: UUID[]; // who already answered current question
+  firstCorrectPlayerId?: UUID | null; // winner for current question
 }
 
 export interface GameHistoryDoc {
