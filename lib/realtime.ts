@@ -7,7 +7,7 @@ export function subscribeToActiveGame(
   onUpdate: (row: ActiveGameRow) => void
 ) {
   const channel = supabase
-    .channel(`active_game:${gameId}`)
+    .channel(`active_game:${gameId}`, { config: { presence: { key: gameId } } })
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'active_games', filter: `id=eq.${gameId}` },
@@ -39,6 +39,25 @@ export async function insertGameEvent(
 ) {
   const { error } = await supabase.from('game_events').insert(event);
   if (error) throw error;
+}
+
+export function setupPresence(
+  supabase: SupabaseClient,
+  room: string,
+  onJoinLeave: (state: { online: number }) => void
+) {
+  const channel = supabase.channel(`presence:${room}`, { config: { presence: { key: crypto.randomUUID() } } });
+  channel.on('presence', { event: 'sync' }, () => {
+    const state = channel.presenceState();
+    const online = Object.keys(state).length;
+    onJoinLeave({ online });
+  });
+  channel.subscribe(async (status) => {
+    if (status === 'SUBSCRIBED') {
+      await channel.track({ online_at: Date.now() });
+    }
+  });
+  return () => supabase.removeChannel(channel);
 }
 
 

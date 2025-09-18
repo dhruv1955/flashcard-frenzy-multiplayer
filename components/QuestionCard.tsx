@@ -6,9 +6,10 @@ type Props = {
   prompt: string;
   onAnswer: (value: string) => Promise<void> | void;
   seconds: number;
+  revealText?: string | null;
 };
 
-export function QuestionCard({ prompt, onAnswer, seconds }: Props) {
+export function QuestionCard({ prompt, onAnswer, seconds, revealText = null }: Props) {
   const [value, setValue] = useState("");
   const [remaining, setRemaining] = useState(seconds);
   const [submitting, setSubmitting] = useState(false);
@@ -44,16 +45,19 @@ export function QuestionCard({ prompt, onAnswer, seconds }: Props) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 transition-all duration-300 ease-out">
       <div className="h-2 bg-gray-200 rounded">
         <div className="h-2 bg-blue-600 rounded" style={{ width: `${progress}%`, transition: 'width 1s linear' }} />
       </div>
-      <p className="text-lg font-medium">{prompt}</p>
+      <p className="text-lg font-medium animate-in fade-in slide-in-from-bottom-1">{prompt}</p>
       <form onSubmit={submit} className="flex gap-2">
         <input value={value} onChange={(e) => setValue(e.target.value)} className="border px-3 py-2 rounded flex-1" placeholder="Your answer" />
         <button type="submit" disabled={submitting || remaining === 0} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-60">Submit</button>
       </form>
       <div className="text-sm text-gray-500">Time left: {remaining}s</div>
+      {revealText && (
+        <div className="text-sm text-green-700">Answer: {revealText}</div>
+      )}
     </div>
   );
 }

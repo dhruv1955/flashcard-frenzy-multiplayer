@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { getMongoDb } from '@/lib/mongodb';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
+import type { ActiveGameRow } from '@/types/db';
 import type { GameDoc } from '@/types/db';
 
 const BodySchema = z.object({ playerId: z.string().min(1) });
@@ -33,6 +35,18 @@ export async function POST(req: Request) {
       createdAt: now,
     };
     await db.collection<GameDoc>('games').insertOne(game);
+    // Publish initial realtime state
+    const admin = getSupabaseAdmin();
+    const snapshot: ActiveGameRow = {
+      id: game.id,
+      game_state: game,
+      players: game.players,
+      current_question_id: game.currentQuestion ?? null,
+      scores: game.scores,
+      status: game.status,
+    };
+    const { error: upsertErr } = await admin.from('active_games').upsert(snapshot);
+    if (upsertErr) throw upsertErr;
     return NextResponse.json({ game }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

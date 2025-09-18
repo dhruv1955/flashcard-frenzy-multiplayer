@@ -5,7 +5,7 @@ import { useAuth } from "./AuthProvider";
 import { QuestionCard } from "./QuestionCard";
 import { Scoreboard } from "./Scoreboard";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
-import { subscribeToActiveGame } from "@/lib/realtime";
+import { setupPresence, subscribeToActiveGame } from "@/lib/realtime";
 
 type GameState = {
   id: string;
@@ -21,6 +21,8 @@ export function GameRoom({ gameId }: { gameId: string }) {
   const [state, setState] = useState<GameState | null>(null);
   const [questionPrompt, setQuestionPrompt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [online, setOnline] = useState(0);
+  const [connected, setConnected] = useState(true);
 
   useEffect(() => {
     const unsubscribe = subscribeToActiveGame(supabase, gameId, (row: any) => {
@@ -32,7 +34,18 @@ export function GameRoom({ gameId }: { gameId: string }) {
         current_question_id: row.current_question_id,
       });
     });
-    return () => unsubscribe();
+    const offPresence = setupPresence(supabase, gameId, ({ online }) => setOnline(online));
+    const { data: conn } = supabase.channel('connection:watch').on('system', { event: 'connected' }, () => setConnected(true)).subscribe();
+    const onOffline = () => setConnected(false);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', () => setConnected(true));
+    return () => {
+      unsubscribe();
+      offPresence();
+      supabase.removeChannel(conn);
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', () => setConnected(true));
+    };
   }, [gameId, supabase]);
 
   useEffect(() => {
@@ -76,7 +89,7 @@ export function GameRoom({ gameId }: { gameId: string }) {
     }
   };
 
-  if (!state) return <div className="p-4">Connecting...</div>;
+  if (!state) return <div className="p-4 animate-pulse">Connecting...</div>;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -84,7 +97,10 @@ export function GameRoom({ gameId }: { gameId: string }) {
         <div className="rounded border border-white/10 p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-semibold">Game #{state.id.slice(0, 6)}</h2>
-            <span className="text-xs uppercase tracking-wide">{state.status}</span>
+            <span className="text-xs uppercase tracking-wide flex items-center gap-2">
+              <span className={connected ? 'text-green-500' : 'text-red-500'}>●</span>
+              {state.status} · {online} online
+            </span>
           </div>
           {error && <p className="text-sm text-red-600 mb-2">{error}</p>}
           {state.status === 'waiting' && <p>Waiting for players...</p>}

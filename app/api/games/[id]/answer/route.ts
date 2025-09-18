@@ -3,7 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { getMongoDb } from '@/lib/mongodb';
-import type { GameDoc, QuestionDoc } from '@/types/db';
+import type { ActiveGameRow, GameDoc, QuestionDoc } from '@/types/db';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const ParamsSchema = z.object({ id: z.string().min(1) });
 const BodySchema = z.object({ playerId: z.string().min(1), answer: z.string().min(1) });
@@ -58,6 +59,25 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     }
 
     const updated = await games.findOne({ id });
+    // publish realtime score update and event
+    const admin = getSupabaseAdmin();
+    const snapshot: ActiveGameRow = {
+      id: updated!.id,
+      game_state: updated!,
+      players: updated!.players,
+      current_question_id: updated!.currentQuestion ?? null,
+      scores: updated!.scores,
+      status: updated!.status,
+    };
+    await admin.from('active_games').upsert(snapshot);
+    await admin.from('game_events').insert({
+      id: crypto.randomUUID(),
+      game_id: updated!.id,
+      player_id: body.playerId,
+      event_type: 'answer',
+      data: { correct },
+      timestamp: new Date().toISOString(),
+    });
     return NextResponse.json({ correct, game: updated }, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {

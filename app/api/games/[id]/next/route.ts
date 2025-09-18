@@ -3,7 +3,8 @@ import { createSupabaseServerClient } from '@/lib/supabase';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { getMongoDb } from '@/lib/mongodb';
-import type { GameDoc } from '@/types/db';
+import type { ActiveGameRow, GameDoc } from '@/types/db';
+import { getSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 const ParamsSchema = z.object({ id: z.string().min(1) });
 
@@ -32,6 +33,16 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
       { $set: { currentIndex, currentQuestion: queue[currentIndex], currentQuestionStartedAt: new Date().toISOString(), answeredPlayerIds: [], firstCorrectPlayerId: null } }
     );
     const updated = await games.findOne({ id });
+    const admin = getSupabaseAdmin();
+    const snapshot: ActiveGameRow = {
+      id: updated!.id,
+      game_state: updated!,
+      players: updated!.players,
+      current_question_id: updated!.currentQuestion ?? null,
+      scores: updated!.scores,
+      status: updated!.status,
+    };
+    await admin.from('active_games').upsert(snapshot);
     return NextResponse.json({ game: updated }, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {
