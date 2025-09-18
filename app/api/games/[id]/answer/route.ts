@@ -32,6 +32,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
     if (!question) return NextResponse.json({ error: 'Question not found' }, { status: 404 });
 
     const correct = question.answer.trim().toLowerCase() === body.answer.trim().toLowerCase();
+    const timeMs = game.currentQuestionStartedAt ? Date.now() - new Date(game.currentQuestionStartedAt).getTime() : undefined;
     // Prevent multiple answers from same player for this question
     if ((game.answeredPlayerIds ?? []).includes(body.playerId)) {
       return NextResponse.json({ correct: false, alreadyAnswered: true, game }, { status: 200 });
@@ -39,7 +40,7 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
 
     // If already someone got it first, just mark as answered
     if (game.firstCorrectPlayerId) {
-      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId } });
+      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId, submissions: { questionId: game.currentQuestion, playerId: body.playerId, answer: body.answer, correct, timeMs, at: new Date().toISOString() } } });
       const updatedAfter = await games.findOne({ id });
       return NextResponse.json({ correct: false, game: updatedAfter }, { status: 200 });
     }
@@ -51,11 +52,11 @@ export async function POST(req: Request, context: { params: Promise<{ id: string
         {
           $set: { firstCorrectPlayerId: body.playerId },
           $inc: { [`scores.${body.playerId}`]: 1 } as any,
-          $push: { answeredPlayerIds: body.playerId },
+          $push: { answeredPlayerIds: body.playerId, submissions: { questionId: game.currentQuestion, playerId: body.playerId, answer: body.answer, correct, timeMs, at: new Date().toISOString() } },
         }
       );
     } else {
-      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId } });
+      await games.updateOne({ id }, { $push: { answeredPlayerIds: body.playerId, submissions: { questionId: game.currentQuestion, playerId: body.playerId, answer: body.answer, correct, timeMs, at: new Date().toISOString() } } });
     }
 
     const updated = await games.findOne({ id });

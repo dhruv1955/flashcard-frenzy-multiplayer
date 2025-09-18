@@ -24,8 +24,33 @@ export async function POST(_req: Request, context: { params: Promise<{ id: strin
     const queue = game.questionQueue ?? [];
     const currentIndex = (game.currentIndex ?? 0) + 1;
     if (currentIndex >= queue.length) {
-      await games.updateOne({ id }, { $set: { status: 'completed', endedAt: new Date().toISOString(), currentQuestion: null, currentQuestionStartedAt: null } as any });
+      const endedAt = new Date().toISOString();
+      await games.updateOne({ id }, { $set: { status: 'completed', endedAt, currentQuestion: null, currentQuestionStartedAt: null } as any });
       const updated = await games.findOne({ id });
+      // persist history per player
+      const duration = updated!.createdAt ? new Date(endedAt).getTime() - new Date(updated!.createdAt).getTime() : 0;
+      const submissions = updated!.submissions ?? [];
+      const perPlayer = new Map<string, { answers: any[]; score: number }>();
+      for (const pid of updated!.players) perPlayer.set(pid, { answers: [], score: updated!.scores[pid] ?? 0 });
+      for (const s of submissions) {
+        const rec = perPlayer.get(s.playerId);
+        if (!rec) continue;
+        rec.answers.push({ questionId: s.questionId, correct: s.correct, timeMs: s.timeMs, answer: s.answer });
+      }
+      const history = db.collection('gameHistory');
+      for (const [playerId, rec] of perPlayer.entries()) {
+        const correctCount = rec.answers.filter((a) => a.correct).length;
+        const accuracy = rec.answers.length ? correctCount / rec.answers.length : 0;
+        await history.insertOne({
+          gameId: updated!.id,
+          playerId,
+          answers: rec.answers,
+          finalScore: rec.score,
+          duration,
+          accuracy,
+          createdAt: endedAt,
+        });
+      }
       return NextResponse.json({ game: updated }, { status: 200 });
     }
     await games.updateOne(

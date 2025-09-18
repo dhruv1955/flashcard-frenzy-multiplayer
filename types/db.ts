@@ -28,14 +28,25 @@ export interface GameDoc {
   currentQuestionStartedAt?: string; // ISO timestamp
   answeredPlayerIds?: UUID[]; // who already answered current question
   firstCorrectPlayerId?: UUID | null; // winner for current question
+  // per-question submission log for history
+  submissions?: Array<{
+    questionId: UUID;
+    playerId: UUID;
+    answer: string;
+    correct: boolean;
+    timeMs?: number;
+    at: string;
+  }>;
 }
 
 export interface GameHistoryDoc {
   gameId: UUID;
   playerId: UUID;
-  answers: Array<{ questionId: UUID; correct: boolean; timeMs?: number }>;
+  answers: Array<{ questionId: UUID; correct: boolean; timeMs?: number; answer?: string }>;
   finalScore: number;
   duration: number; // milliseconds
+  accuracy: number; // 0..1
+  createdAt?: string;
 }
 
 // Supabase tables - shapes for reference when publishing realtime updates
