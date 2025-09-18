@@ -15,10 +15,11 @@ npm i
 ```
 2) Create `.env.local`
 ```
-NEXT_PUBLIC_SUPABASE_URL=https://awfajtuvkqmcxqpnyswe.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3ZmFqdHV2a3FtY3hxcG55c3dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMTcxNzIsImV4cCI6MjA3Mzc5MzE3Mn0.GOGAFKmaJAJG6RwJrRXi9tQoH-aBtW-etjWV3eoPanE
-MONGODB_URI=mongodb+srv://dhruvyadav042905_db_user:dgYjJgIqrm8FezMI@flashcard-frenzy.yjc06ib.mongodb.net/?retryWrites=true&w=majority
-MONGODB_DB_NAME=flashcard_frenzy
+NEXT_PUBLIC_SUPABASE_URL=your-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role
+MONGODB_URI=your-mongodb-uri
+MONGODB_DB=flashcard_frenzy
 ```
 3) Run dev server
 ```bash
